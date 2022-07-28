@@ -1,3 +1,12 @@
+1.3.0 (italypaleale) / 2022-07-27
+=================================
+
+* Upgraded libvips to v8.13.0
+* Built using Go 1.18.4
+* Built with libcgif and libspng
+* Updated dependencies
+* Switched bimg to italypaleale/bimg fork
+* Added support for saving file as AVIF
 
 1.2.4 / 2020-08-12
 ==================
