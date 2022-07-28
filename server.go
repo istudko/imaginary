@@ -66,19 +66,21 @@ func Server(o ServerOptions) {
 	handler := NewLog(NewServerMux(o), os.Stdout, o.LogLevel)
 
 	server := &http.Server{
-		Addr:           addr,
-		Handler:        handler,
-		MaxHeaderBytes: 1 << 20,
-		ReadTimeout:    time.Duration(o.HTTPReadTimeout) * time.Second,
-		WriteTimeout:   time.Duration(o.HTTPWriteTimeout) * time.Second,
+		Addr:              addr,
+		Handler:           handler,
+		ReadHeaderTimeout: 15 * time.Second,
+		MaxHeaderBytes:    1 << 20,
+		ReadTimeout:       time.Duration(o.HTTPReadTimeout) * time.Second,
+		WriteTimeout:      time.Duration(o.HTTPWriteTimeout) * time.Second,
 	}
 
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
-		if err := listenAndServe(server, o); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("listen: %s\n", err)
+		err := listenAndServe(server, o)
+		if err != http.ErrServerClosed {
+			log.Fatalf("Failed to listen: %s\n", err)
 		}
 	}()
 
@@ -86,13 +88,10 @@ func Server(o ServerOptions) {
 	log.Print("Graceful shutdown")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer func() {
-		// extra handling here
-		cancel()
-	}()
-
-	if err := server.Shutdown(ctx); err != nil {
-		log.Fatalf("Server Shutdown Failed:%+v", err)
+	err := server.Shutdown(ctx)
+	cancel()
+	if err != nil {
+		log.Fatalf("Server shutdown failed:%+v", err)
 	}
 }
 
