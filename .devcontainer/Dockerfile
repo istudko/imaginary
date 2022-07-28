@@ -6,8 +6,8 @@ ARG VARIANT="1.18-bullseye"
 FROM mcr.microsoft.com/vscode/devcontainers/go:0-${VARIANT}
 
 # Versions of libvips and golanci-lint
-ARG LIBVIPS_VERSION=8.12.2
-ARG GOLANGCILINT_VERSION=1.29.0
+ARG LIBVIPS_VERSION=8.13.0
+ARG GOLANGCILINT_VERSION=1.47.2
 
 # Set required env vars
 ENV CGO_CFLAGS_ALLOW="-Xpreprocessor"
