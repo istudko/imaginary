@@ -1,6 +1,6 @@
 module github.com/h2non/imaginary
 
-go 1.17
+go 1.18
 
 require (
 	github.com/h2non/bimg v1.1.6
