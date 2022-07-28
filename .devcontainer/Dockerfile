@@ -9,13 +9,16 @@ FROM mcr.microsoft.com/vscode/devcontainers/go:0-${VARIANT}
 ARG LIBVIPS_VERSION=8.12.2
 ARG GOLANGCILINT_VERSION=1.29.0
 
+# Set required env vars
+ENV CGO_CFLAGS_ALLOW="-Xpreprocessor"
+
 # Install additional OS packages
 RUN DEBIAN_FRONTEND=noninteractive \
   apt-get update && \
   apt-get install --no-install-recommends -y \
   ca-certificates \
   automake build-essential curl \
-  procps    libopenexr25 libmagickwand-6.q16-6 libpango1.0-0 libmatio11 \
+  procps libopenexr25 libmagickwand-6.q16-6 libpango1.0-0 libmatio11 \
   libopenslide0 libjemalloc2 gobject-introspection gtk-doc-tools \
   libglib2.0-0 libglib2.0-dev libjpeg62-turbo libjpeg62-turbo-dev \
   libpng16-16 libpng-dev libwebp6 libwebpmux3 libwebpdemux2 libwebp-dev \
