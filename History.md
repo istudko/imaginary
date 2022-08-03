@@ -1,3 +1,10 @@
+1.4.0 (italypaleale) / 2022-08-02
+=================================
+
+* `/info` returns EXIF tags read from image
+* Updated bimg to italypaleale/bimg@1.2.1
+* Built using Go 1.18.5
+
 1.3.0 (italypaleale) / 2022-07-27
 =================================
 
