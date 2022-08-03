@@ -9,8 +9,6 @@ require (
 	github.com/throttled/throttled/v2 v2.9.1
 )
 
-require (
-	github.com/hashicorp/golang-lru v0.5.4 // indirect
-)
+require github.com/hashicorp/golang-lru v0.5.4 // indirect
 
-replace github.com/h2non/bimg => github.com/italypaleale/bimg v1.2.0
+replace github.com/h2non/bimg => github.com/italypaleale/bimg v1.2.1
