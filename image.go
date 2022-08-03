@@ -5,10 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"strings"
 	"io/ioutil"
 	"math"
 	"net/http"
+	"strings"
 
 	"github.com/h2non/bimg"
 )
@@ -58,6 +58,7 @@ type ImageInfo struct {
 	Profile     bool   `json:"hasProfile"`
 	Channels    int    `json:"channels"`
 	Orientation int    `json:"orientation"`
+	EXIF        *EXIF  `json:"exif"`
 }
 
 func Info(buf []byte, o ImageOptions) (Image, error) {
@@ -79,6 +80,7 @@ func Info(buf []byte, o ImageOptions) (Image, error) {
 		Profile:     meta.Profile,
 		Channels:    meta.Channels,
 		Orientation: meta.Orientation,
+		EXIF:        ParseEXIFFromBimg(&meta.EXIF),
 	}
 
 	body, _ := json.Marshal(info)
