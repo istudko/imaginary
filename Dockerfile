@@ -1,4 +1,4 @@
-ARG GOLANG_VERSION=1.18
+ARG GOLANG_VERSION=1.18.5
 FROM golang:${GOLANG_VERSION}-bullseye as builder
 
 # Version of dependencies: libvips, libcgif, libspng
