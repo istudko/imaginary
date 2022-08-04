@@ -1,14 +1,18 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"math"
+	"mime/multipart"
 	"net/http"
+	"net/textproto"
 	"strings"
+	"sync"
 
 	"github.com/h2non/bimg"
 )
@@ -371,7 +375,7 @@ func GaussianBlur(buf []byte, o ImageOptions) (Image, error) {
 	return Process(buf, opts)
 }
 
-func Pipeline(buf []byte, o ImageOptions) (Image, error) {
+func Pipeline(buf []byte, o ImageOptions) (image Image, err error) {
 	if len(o.Operations) == 0 {
 		return Image{}, NewError("Missing or invalid pipeline operations JSON", http.StatusBadRequest)
 	}
@@ -379,7 +383,7 @@ func Pipeline(buf []byte, o ImageOptions) (Image, error) {
 		return Image{}, NewError("Maximum allowed pipeline operations exceeded", http.StatusBadRequest)
 	}
 
-	// Validate and built operations
+	// Validate and build operations
 	for i, operation := range o.Operations {
 		// Validate supported operation name
 		var exists bool
@@ -388,8 +392,7 @@ func Pipeline(buf []byte, o ImageOptions) (Image, error) {
 		}
 
 		// Parse and construct operation options
-		var err error
-		operation.ImageOptions, err = buildParamsFromOperation(operation)
+		operation.ImageOptions, err = buildParamsFromMap(operation.Params)
 		if err != nil {
 			return Image{}, err
 		}
@@ -397,9 +400,6 @@ func Pipeline(buf []byte, o ImageOptions) (Image, error) {
 		// Mutate list by value
 		o.Operations[i] = operation
 	}
-
-	var image Image
-	var err error
 
 	// Reduce image by running multiple operations
 	image = Image{Body: buf}
@@ -418,6 +418,119 @@ func Pipeline(buf []byte, o ImageOptions) (Image, error) {
 	}
 
 	return image, err
+}
+
+func Multi(buf []byte, o ImageOptions) (image Image, err error) {
+	if len(o.Multi) == 0 {
+		return Image{}, NewError("Missing or invalid list of tasks", http.StatusBadRequest)
+	}
+	if len(o.Multi) > 10 {
+		return Image{}, NewError("Maximum allowed number of tasks exceeded", http.StatusBadRequest)
+	}
+
+	// Validate and build tasks
+	var hasInfoTask bool
+	for i, task := range o.Multi {
+		// Info operations are treated in a special way
+		if task.OperationName == "info" && !hasInfoTask {
+			task.Operation = Info
+			hasInfoTask = true
+
+			// Mutate list by value
+			o.Multi[i] = task
+			continue
+		}
+
+		// Validate supported operation name
+		var exists bool
+		if task.Operation, exists = OperationsMap[task.OperationName]; !exists {
+			return Image{}, NewError("Unsupported task name: "+task.Name, http.StatusBadRequest)
+		}
+
+		// Parse and construct operation options
+		task.ImageOptions, err = buildParamsFromMap(task.Params)
+		if err != nil {
+			return Image{}, err
+		}
+
+		// Mutate list by value
+		o.Multi[i] = task
+	}
+
+	// Perform the multiple operations in prallel
+	out := &bytes.Buffer{}
+	mw := multipart.NewWriter(out)
+	wg := sync.WaitGroup{}
+	writingLock := sync.Mutex{}
+	var errOut error
+	for i, task := range o.Multi {
+		wg.Add(1)
+		go func(i int, task MultiTask) {
+			defer wg.Done()
+
+			res, err := task.Operation(buf, task.ImageOptions)
+			if err != nil {
+				errOut = err
+				return
+			}
+			ext := GetImageExtensionFromMime(res.Mime)
+			if ext != "" {
+				ext = "." + ext
+			}
+
+			// Only one can write at the same time.
+			writingLock.Lock()
+			defer writingLock.Unlock()
+
+			// Check if another goroutine has errored before exiting
+			if errOut != nil {
+				return
+			}
+
+			mh := textproto.MIMEHeader{}
+			if task.OperationName == "info" {
+				mh.Set("Content-Type", "application/json")
+				mh.Set("Content-Disposition", `form-data; name="info"`)
+			} else {
+				mh.Set("Content-Type", res.Mime)
+				mh.Set("Content-Disposition",
+					fmt.Sprintf(`form-data; name="%s"; filename="%d%s"`, task.Name, i, ext),
+				)
+			}
+			part, err := mw.CreatePart(mh)
+			if err != nil {
+				errOut = err
+				return
+			}
+
+			written, err := part.Write(res.Body)
+			if err != nil {
+				errOut = err
+				return
+			}
+			if written != len(res.Body) {
+				errOut = fmt.Errorf("written only %d/%d bytes in part", written, len(res.Body))
+				return
+			}
+		}(i, task)
+	}
+	wg.Wait()
+
+	if errOut != nil {
+		return Image{}, errOut
+	}
+
+	err = mw.Close()
+	if err != nil {
+		return Image{}, err
+	}
+
+	image = Image{
+		Body: out.Bytes(),
+		Mime: "multipart/form-data",
+	}
+
+	return image, nil
 }
 
 func Process(buf []byte, opts bimg.Options) (out Image, err error) {

@@ -53,6 +53,7 @@ var paramTypeCoercions = map[string]Coercion{
 	"sigma":       coerceSigma,
 	"minampl":     coerceMinAmpl,
 	"operations":  coerceOperations,
+	"tasks":       coerceTasks,
 	"interlace":   coerceInterlace,
 	"aspectratio": coerceAspectRatio,
 	"palette":     coercePalette,
@@ -327,16 +328,29 @@ func coerceMinAmpl(io *ImageOptions, param interface{}) (err error) {
 }
 
 func coerceOperations(io *ImageOptions, param interface{}) (err error) {
-	if v, ok := param.(string); ok {
-		ops, err := parseJSONOperations(v)
-		if err == nil {
-			io.Operations = ops
-		}
-
-		return err
+	v, ok := param.(string)
+	if !ok {
+		return ErrUnsupportedValue
 	}
 
-	return ErrUnsupportedValue
+	ops, err := parseJSONOperations(v)
+	if err == nil {
+		io.Operations = ops
+	}
+	return err
+}
+
+func coerceTasks(io *ImageOptions, param interface{}) (err error) {
+	v, ok := param.(string)
+	if !ok {
+		return ErrUnsupportedValue
+	}
+
+	tasks, err := parseJSONTasks(v)
+	if err == nil {
+		io.Multi = tasks
+	}
+	return err
 }
 
 func coerceInterlace(io *ImageOptions, param interface{}) (err error) {
@@ -356,13 +370,13 @@ func coerceSpeed(io *ImageOptions, param interface{}) (err error) {
 	return err
 }
 
-func buildParamsFromOperation(op PipelineOperation) (ImageOptions, error) {
-	var options ImageOptions
+func buildParamsFromMap(params map[string]any) (ImageOptions, error) {
+	options := ImageOptions{
+		// Apply defaults
+		Extend: bimg.ExtendCopy,
+	}
 
-	// Apply defaults
-	options.Extend = bimg.ExtendCopy
-
-	for key, value := range op.Params {
+	for key, value := range params {
 		fn, ok := paramTypeCoercions[key]
 		if !ok {
 			continue
@@ -379,10 +393,10 @@ func buildParamsFromOperation(op PipelineOperation) (ImageOptions, error) {
 
 // buildParamsFromQuery builds the ImageOptions type from untyped parameters
 func buildParamsFromQuery(query url.Values) (ImageOptions, error) {
-	var options ImageOptions
-
-	// Apply defaults
-	options.Extend = bimg.ExtendCopy
+	options := ImageOptions{
+		// Apply defaults
+		Extend: bimg.ExtendCopy,
+	}
 
 	// Extract only known parameters
 	for key := range query {
@@ -448,17 +462,25 @@ func parseColor(val string) []uint8 {
 
 func parseJSONOperations(data string) (PipelineOperations, error) {
 	var operations PipelineOperations
+	err := parseJSONObj(data, &operations)
+	return operations, err
+}
 
+func parseJSONTasks(data string) ([]MultiTask, error) {
+	var tasks []MultiTask
+	err := parseJSONObj(data, &tasks)
+	return tasks, err
+}
+
+func parseJSONObj(data string, out any) error {
 	// Fewer than 2 characters cannot be valid JSON. We assume empty operation.
 	if len(data) < 2 {
-		return operations, nil
+		return nil
 	}
 
 	d := json.NewDecoder(strings.NewReader(data))
 	d.DisallowUnknownFields()
-
-	err := d.Decode(&operations)
-	return operations, err
+	return d.Decode(out)
 }
 
 func parseExtendMode(val string) bimg.Extend {

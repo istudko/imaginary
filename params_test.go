@@ -199,7 +199,7 @@ func TestReadMapParams(t *testing.T) {
 	}
 
 	for _, test := range cases {
-		opts, err := buildParamsFromOperation(PipelineOperation{Params: test.params})
+		opts, err := buildParamsFromMap(test.params)
 		if err != nil {
 			t.Errorf("Error reading parameters %s", err)
 			t.FailNow()
@@ -258,7 +258,7 @@ func TestBuildParamsFromOperation(t *testing.T) {
 		},
 	}
 
-	options, err := buildParamsFromOperation(op)
+	options, err := buildParamsFromMap(op.Params)
 	if err != nil {
 		t.Errorf("Expected this to work! %s", err)
 	}

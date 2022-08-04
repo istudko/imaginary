@@ -49,26 +49,9 @@ type EXIF struct {
 	SceneType               string     `json:"sceneType,omitempty"`
 	SceneCaptureType        int        `json:"sceneCaptureType,omitempty"`
 	GPS                     *EXIFGPS   `json:"gps,omitempty"`
-
-	/*
-		MakerNote           string `json:"makerNote,omitempty"`
-		SubSecTimeOriginal  string `json:"subSecTimeOriginal,omitempty"`
-		SubSecTimeDigitized string `json:"subSecTimeDigitized,omitempty"`
-	*/
-
-	GPSLatitudeRef     string `json:"gpsLatitudeRef,omitempty"`
-	GPSLatitude        string `json:"gpsLatitude,omitempty"`
-	GPSLongitudeRef    string `json:"gpsLongitudeRef,omitempty"`
-	GPSLongitude       string `json:"gpsLongitude,omitempty"`
-	GPSAltitudeRef     string `json:"gpsAltitudeRef,omitempty"`
-	GPSAltitude        string `json:"gpsAltitude,omitempty"`
-	GPSSpeedRef        string `json:"gpsSpeedRef,omitempty"`
-	GPSSpeed           string `json:"gpsSpeed,omitempty"`
-	GPSImgDirectionRef string `json:"gpsImgDirectionRef,omitempty"`
-	GPSImgDirection    string `json:"gpsImgDirection,omitempty"`
-	GPSDestBearingRef  string `json:"gpsDestBearingRef,omitempty"`
-	GPSDestBearing     string `json:"gpsDestBearing,omitempty"`
-	GPSDateStamp       string `json:"gpsDateStamp,omitempty"`
+	// MakerNote           string `json:"makerNote,omitempty"`
+	// SubSecTimeOriginal  string `json:"subSecTimeOriginal,omitempty"`
+	// SubSecTimeDigitized string `json:"subSecTimeDigitized,omitempty"`
 }
 
 type EXIFGPS struct {

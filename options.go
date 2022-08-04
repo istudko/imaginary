@@ -49,6 +49,7 @@ type ImageOptions struct {
 	Gravity       bimg.Gravity
 	Colorspace    bimg.Interpretation
 	Operations    PipelineOperations
+	Multi         []MultiTask
 }
 
 // IsDefinedField holds boolean ImageOptions fields. If true it means the field was specified in the request. This
@@ -78,6 +79,15 @@ type PipelineOperation struct {
 
 // PipelineOperations defines the expected interface for a list of operations.
 type PipelineOperations []PipelineOperation
+
+// MultiTask represents the structure for a multi-operation task.
+type MultiTask struct {
+	Name          string                 `json:"name"`
+	OperationName string                 `json:"operation"`
+	Params        map[string]interface{} `json:"params"`
+	ImageOptions  ImageOptions           `json:"-"`
+	Operation     Operation              `json:"-"`
+}
 
 func transformByAspectRatio(params map[string]interface{}) (width, height int) {
 	width, _ = coerceTypeInt(params["width"])
@@ -115,7 +125,6 @@ func parseAspectRatio(val string) map[string]int {
 }
 
 func shouldTransformByAspectRatio(height, width int) bool {
-
 	// override aspect ratio parameters if width and height is given or not given at all
 	if (width != 0 && height != 0) || (width == 0 && height == 0) {
 		return false

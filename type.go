@@ -41,6 +41,8 @@ func ImageType(name string) bimg.ImageType {
 		return bimg.WEBP
 	case "avif":
 		return bimg.AVIF
+	case "heic", "heif":
+		return bimg.HEIF
 	case "tiff":
 		return bimg.TIFF
 	case "gif":
@@ -69,7 +71,37 @@ func GetImageMimeType(code bimg.ImageType) string {
 		return "image/svg+xml"
 	case bimg.PDF:
 		return "application/pdf"
+	case bimg.HEIF:
+		return "image/heic"
+	case bimg.AVIF:
+		return "image/avif"
 	default:
 		return "image/jpeg"
+	}
+}
+
+// GetImageExtensionFromMime returns the file extension for a given mime type.
+func GetImageExtensionFromMime(mime string) string {
+	switch mime {
+	case "image/png":
+		return "png"
+	case "image/webp":
+		return "webp"
+	case "image/tiff":
+		return "tiff"
+	case "image/gif":
+		return "gif"
+	case "image/svg+xml":
+		return "svg"
+	case "application/pdf":
+		return "pdf"
+	case "image/heic":
+		return "heic"
+	case "image/avif":
+		return "avif"
+	case "image/jpeg":
+		return "jpg"
+	default:
+		return ""
 	}
 }
