@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 	"math"
+	"mime"
 	"mime/multipart"
 	"net/http"
 	"net/textproto"
@@ -430,7 +431,18 @@ func Multi(buf []byte, o ImageOptions) (image Image, err error) {
 
 	// Validate and build tasks
 	var hasInfoTask bool
+	taskNames := make([]string, len(o.Multi))
 	for i, task := range o.Multi {
+		if task.Name == "" {
+			return Image{}, NewError(fmt.Sprintf("Task %d has empty name", i), http.StatusBadRequest)
+		}
+		task.Name = strings.ToLower(task.Name)
+		for _, name := range taskNames {
+			if name != "" && name == task.Name {
+				return Image{}, NewError("Duplicate task name: "+name, http.StatusBadRequest)
+			}
+		}
+
 		// Info operations are treated in a special way
 		if task.OperationName == "info" && !hasInfoTask {
 			task.Operation = Info
@@ -525,9 +537,12 @@ func Multi(buf []byte, o ImageOptions) (image Image, err error) {
 		return Image{}, err
 	}
 
+	mt := mime.FormatMediaType("multipart/form-data", map[string]string{
+		"boundary": mw.Boundary(),
+	})
 	image = Image{
 		Body: out.Bytes(),
-		Mime: "multipart/form-data",
+		Mime: mt,
 	}
 
 	return image, nil
