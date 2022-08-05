@@ -1,18 +1,24 @@
 package main
 
 import (
-	"io/ioutil"
+	"bytes"
+	"encoding/json"
+	"io"
+	"mime"
+	"mime/multipart"
+	"strings"
 	"testing"
 )
 
 func TestImageResize(t *testing.T) {
 	t.Run("Width and Height defined", func(t *testing.T) {
 		opts := ImageOptions{Width: 300, Height: 300}
-		buf, _ := ioutil.ReadAll(readFile("imaginary.jpg"))
+		buf, _ := io.ReadAll(readFile("imaginary.jpg"))
 
 		img, err := Resize(buf, opts)
 		if err != nil {
 			t.Errorf("Cannot process image: %s", err)
+			return
 		}
 		if img.Mime != "image/jpeg" {
 			t.Error("Invalid image MIME type")
@@ -24,11 +30,12 @@ func TestImageResize(t *testing.T) {
 
 	t.Run("Width defined", func(t *testing.T) {
 		opts := ImageOptions{Width: 300}
-		buf, _ := ioutil.ReadAll(readFile("imaginary.jpg"))
+		buf, _ := io.ReadAll(readFile("imaginary.jpg"))
 
 		img, err := Resize(buf, opts)
 		if err != nil {
 			t.Errorf("Cannot process image: %s", err)
+			return
 		}
 		if img.Mime != "image/jpeg" {
 			t.Error("Invalid image MIME type")
@@ -40,11 +47,12 @@ func TestImageResize(t *testing.T) {
 
 	t.Run("Width defined with NoCrop=false", func(t *testing.T) {
 		opts := ImageOptions{Width: 300, NoCrop: false, IsDefinedField: IsDefinedField{NoCrop: true}}
-		buf, _ := ioutil.ReadAll(readFile("imaginary.jpg"))
+		buf, _ := io.ReadAll(readFile("imaginary.jpg"))
 
 		img, err := Resize(buf, opts)
 		if err != nil {
 			t.Errorf("Cannot process image: %s", err)
+			return
 		}
 		if img.Mime != "image/jpeg" {
 			t.Error("Invalid image MIME type")
@@ -58,11 +66,12 @@ func TestImageResize(t *testing.T) {
 
 	t.Run("Width defined with NoCrop=true", func(t *testing.T) {
 		opts := ImageOptions{Width: 300, NoCrop: true, IsDefinedField: IsDefinedField{NoCrop: true}}
-		buf, _ := ioutil.ReadAll(readFile("imaginary.jpg"))
+		buf, _ := io.ReadAll(readFile("imaginary.jpg"))
 
 		img, err := Resize(buf, opts)
 		if err != nil {
 			t.Errorf("Cannot process image: %s", err)
+			return
 		}
 		if img.Mime != "image/jpeg" {
 			t.Error("Invalid image MIME type")
@@ -78,11 +87,12 @@ func TestImageResize(t *testing.T) {
 
 func TestImageFit(t *testing.T) {
 	opts := ImageOptions{Width: 300, Height: 300}
-	buf, _ := ioutil.ReadAll(readFile("imaginary.jpg"))
+	buf, _ := io.ReadAll(readFile("imaginary.jpg"))
 
 	img, err := Fit(buf, opts)
 	if err != nil {
 		t.Errorf("Cannot process image: %s", err)
+		return
 	}
 	if img.Mime != "image/jpeg" {
 		t.Error("Invalid image MIME type")
@@ -94,10 +104,11 @@ func TestImageFit(t *testing.T) {
 }
 
 func TestImageAutoRotate(t *testing.T) {
-	buf, _ := ioutil.ReadAll(readFile("imaginary.jpg"))
+	buf, _ := io.ReadAll(readFile("imaginary.jpg"))
 	img, err := AutoRotate(buf, ImageOptions{})
 	if err != nil {
 		t.Errorf("Cannot process image: %s", err)
+		return
 	}
 	if img.Mime != "image/jpeg" {
 		t.Error("Invalid image MIME type")
@@ -127,17 +138,114 @@ func TestImagePipelineOperations(t *testing.T) {
 	}
 
 	opts := ImageOptions{Operations: operations}
-	buf, _ := ioutil.ReadAll(readFile("imaginary.jpg"))
+	buf, _ := io.ReadAll(readFile("imaginary.jpg"))
 
 	img, err := Pipeline(buf, opts)
 	if err != nil {
 		t.Errorf("Cannot process image: %s", err)
+		return
 	}
 	if img.Mime != "image/webp" {
 		t.Error("Invalid image MIME type")
 	}
 	if assertSize(img.Body, width, height) != nil {
 		t.Errorf("Invalid image size, expected: %dx%d", width, height)
+	}
+}
+
+func TestImageMultiTasks(t *testing.T) {
+	tasks := []MultiTask{
+		{
+			Name:          "info",
+			OperationName: "info",
+		},
+		{
+			Name:          "make-smaller",
+			OperationName: "resize",
+			Params: map[string]interface{}{
+				"width": 300,
+				"type":  "webp",
+			},
+		},
+	}
+
+	opts := ImageOptions{Multi: tasks}
+	buf, _ := io.ReadAll(readFile("imaginary.jpg"))
+
+	mp, err := Multi(buf, opts)
+	if err != nil {
+		t.Errorf("Cannot process tasks: %s", err)
+		return
+	}
+
+	mimeType, mimeParams, err := mime.ParseMediaType(mp.Mime)
+	if err != nil {
+		t.Errorf("Cannot parse mime type: %s", err)
+		return
+	}
+	if mimeType != "multipart/form-data" || mimeParams["boundary"] == "" {
+		t.Error("Invalid MIME type")
+		return
+	}
+
+	mr := multipart.NewReader(bytes.NewReader(mp.Body), mimeParams["boundary"])
+	var found int
+	for {
+		p, err := mr.NextPart()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			t.Errorf("Error getting next part: %s", err)
+			return
+		}
+
+		data, err := io.ReadAll(p)
+		if err != nil {
+			t.Errorf("Error reading multipart data: %s", err)
+			return
+		}
+
+		switch p.FormName() {
+		case "info":
+			found++
+			if p.Header.Get("content-type") != "application/json" {
+				t.Error("Part's content type is not application/json", p.Header.Get("content-type"))
+				return
+			}
+			var imageInfo ImageInfo
+			err = json.Unmarshal(data, &imageInfo)
+			if err != nil {
+				t.Errorf("Error parsing image info: %s", err)
+				return
+			}
+			if imageInfo.Width != 550 || imageInfo.Height != 740 || imageInfo.EXIF.Orientation != 1 {
+				t.Error("Unexpected metadata values", string(data))
+				return
+			}
+		case "make-smaller":
+			found++
+			if !strings.HasSuffix(p.FileName(), ".webp") {
+				t.Error("Part's file name does not end in .webp", p.FileName())
+				return
+			}
+			if p.Header.Get("content-type") != "image/webp" {
+				t.Error("Part's content type is not image/webp", p.Header.Get("content-type"))
+				return
+			}
+			if err = assertSize(data, 300, 404); err != nil {
+				t.Error(err)
+				return
+			}
+		default:
+			t.Error("Found foreign part: " + p.FormName())
+			return
+		}
+	}
+
+	if found != 2 {
+		t.Error("Expected to find 2 parts, but found", found)
+		return
 	}
 }
 
