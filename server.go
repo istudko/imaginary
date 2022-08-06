@@ -112,7 +112,6 @@ func NewServerMux(o ServerOptions) http.Handler {
 	mux := http.NewServeMux()
 
 	mux.Handle(join(o, "/"), Middleware(indexController(o), o))
-	mux.Handle(join(o, "/form"), Middleware(formController(o), o))
 	mux.Handle(join(o, "/health"), Middleware(healthController, o))
 
 	image := ImageMiddleware(o)

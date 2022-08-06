@@ -160,7 +160,7 @@ func getCacheControl(ttl int) string {
 }
 
 func isPublicPath(path string) bool {
-	return path == "/" || path == "/health" || path == "/form"
+	return path == "/" || path == "/health"
 }
 
 func validateURLSignature(next http.Handler, o ServerOptions) http.Handler {
