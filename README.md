@@ -1,14 +1,14 @@
-# imaginary [![Build Status](https://travis-ci.org/h2non/imaginary.svg)](https://travis-ci.org/h2non/imaginary) [![Docker](https://img.shields.io/badge/docker-h2non/imaginary-blue.svg)](https://hub.docker.com/r/h2non/imaginary/) [![Docker Registry](https://img.shields.io/docker/pulls/h2non/imaginary.svg)](https://hub.docker.com/r/h2non/imaginary/) [![Fly.io](https://img.shields.io/badge/deploy-fly.io-blue.svg)](https://fly.io/launch/github/h2non/imaginary)
+# imaginary
 
-**[Fast](#benchmarks) HTTP [microservice](http://microservices.io/patterns/microservices.html)** written in Go **for high-level image processing** backed by [bimg](https://github.com/h2non/bimg) and [libvips](https://github.com/jcupitt/libvips). `imaginary` can be used as private or public HTTP service for massive image processing with first-class support for [Docker](#docker) & [Fly.io](#flyio).
+**Fast HTTP [microservice](http://microservices.io/patterns/microservices.html)** written in Go **for high-level image processing** backed by [bimg](https://github.com/h2non/bimg) and [libvips](https://github.com/jcupitt/libvips). `imaginary` can be used as private or public HTTP service for massive image processing with first-class support for [Docker](#docker).
 It's almost dependency-free and only uses [`net/http`](http://golang.org/pkg/net/http/) native package without additional abstractions for better [performance](#performance).
 
 Supports multiple [image operations](#supported-image-operations) exposed as a simple [HTTP API](#http-api),
 with additional optional features such as **API token authorization**, **URL signature protection**, **HTTP traffic throttle** strategy and **CORS support** for web clients.
 
-`imaginary` **can read** images **from HTTP POST payloads**, **server local path** or **remote HTTP servers**, supporting **JPEG**, **PNG**, **WEBP**, **HEIF**, and optionally **TIFF**, **PDF**, **GIF** and **SVG** formats if `libvips@8.3+` is compiled with proper library bindings.
+`imaginary` **can read** images **from HTTP POST payloads**, **server local path** or **remote HTTP servers**, supporting: **JPEG**, **PNG**, **WEBP**, **HEIF**, **AVIF**, **TIFF**, **PDF**, **GIF** and **SVG**.
 
-`imaginary` is able to output images as JPEG, PNG and WEBP formats, including transparent conversion across them.
+`imaginary` is able to output images as JPEG, PNG, WEBP and AVIF formats, including transparent conversion across them.
 
 `imaginary` optionally **supports image placeholder fallback mechanism** in case of image processing error or server error of any nature, hence an image will be always returned by imaginary even in case of error, trying to match the requested image size and format type transparently. The error details will be provided in the response HTTP header `Error` field serialized as JSON.
 
@@ -60,7 +60,8 @@ To get started, take a look the [installation](#installation) steps, [usage](#co
 - Zoom
 - Thumbnail
 - Fit
-- [Pipeline](#get--post-pipeline) of multiple independent image transformations in a single HTTP request.
+- [Pipeline](#get--post-pipeline) of chained image transformations in a single HTTP request.
+- [Multiple](#get--post-multiple) of multiple independent operations in a single HTTP request.
 - Configurable image area extraction
 - Embed/Extend image, supporting multiple modes (white, black, mirror, copy or custom background color)
 - Watermark (customizable by text)
@@ -73,72 +74,50 @@ To get started, take a look the [installation](#installation) steps, [usage](#co
 
 ## Prerequisites
 
-- [libvips](https://github.com/jcupitt/libvips) 8.8+ (8.9+ recommended)
+- [libvips](https://github.com/jcupitt/libvips) 8.13+
 - C compatible compiler such as gcc 4.6+ or clang 3.0+
-- Go 1.12+
-
-## Installation
-
-```bash
-go get -u github.com/h2non/imaginary
-```
-
-Also, be sure you have the latest version of `bimg`:
-```bash
-go get -u github.com/h2non/bimg
-```
-
-### libvips
-
-Run the following script as `sudo` (supports OSX, Debian/Ubuntu, Redhat, Fedora, Amazon Linux):
-```bash
-curl -s https://raw.githubusercontent.com/h2non/bimg/master/preinstall.sh | sudo bash -
-```
-
-The [install script](https://github.com/h2non/bimg/blob/master/preinstall.sh) requires `curl` and `pkg-config`
+- Go 1.18+
 
 ### Docker
 
-See [Dockerfile](https://github.com/h2non/imaginary/blob/master/Dockerfile) for image details.
+Using Docker is the recommended approach. We publish [Docker images](https://github.com/ItalyPaleAle/imaginary/pkgs/container/imaginary) for imaginary that contain all required dependencies:
 
-Fetch the image (comes with latest stable Go and `libvips` versions)
 ```
-docker pull h2non/imaginary
-```
-
-Start the container with optional flags (default listening on port 9000)
-```
-docker run -p 9000:9000 h2non/imaginary -cors -gzip
+docker pull ghcr.io/italypaleale/imaginary
 ```
 
-Start the container enabling remote URL source image processing via GET requests and `url` query param.
+Start the container with optional flags (default listening on port 9000):
+
 ```
-docker run -p 9000:9000 h2non/imaginary -p 9000 -enable-url-source
+docker run -p 9000:9000 ghcr.io/italypaleale/imaginary -cors -gzip
 ```
 
-Start the container enabling local directory image process via GET requests and `file` query param.
+Start the container enabling remote URL source image processing via GET requests and `url` query param:
+
 ```
-docker run -p 9000:9000 h2non/imaginary -p 900 -mount /volume/images
+docker run -p 9000:9000 ghcr.io/italypaleale/imaginary -p 9000 -enable-url-source
+```
+
+Start the container enabling local directory image process via GET requests and `file` query param:
+
+```
+docker run -p 9000:9000 ghcr.io/italypaleale/imaginary -p 900 -mount /volume/images
 ```
 
 Start the container in debug mode:
 ```
-docker run -p 9000:9000 -e "DEBUG=*" h2non/imaginary
+docker run -p 9000:9000 -e "DEBUG=*" ghcr.io/italypaleale/imaginary
 ```
 
-Enter to the interactive shell in a running container
+Enter to the interactive shell in a running container:
+
 ```
 sudo docker exec -it <containerIdOrName> bash
 ```
 
-Stop the container
-```
-docker stop h2non/imaginary
-```
-
 For more usage examples, see the [command line usage](#command-line-usage).
 
-All Docker images tags are available [here](https://hub.docker.com/r/h2non/imaginary/tags/).
+All Docker images tags are available [here](https://github.com/ItalyPaleAle/imaginary/pkgs/container/imaginary).
 
 #### Docker Compose
 
@@ -148,7 +127,7 @@ You can add `imaginary` to your `docker-compose.yml` file:
 version: "3"
 services:
   imaginary:
-    image: h2non/imaginary:latest
+    image: ghcr.io/italypaleale/imaginary:latest
     # optionally mount a volume as local image source
     volumes:
       - images:/mnt/data
@@ -159,72 +138,26 @@ services:
       - "9000:9000"
 ```
 
-### Fly.io
-
-Deploy imaginary in seconds close to your users in [Fly.io](https://fly.io) cloud by clicking on the button below:
-
-<a href="https://fly.io/docs/app-guides/run-a-global-image-service/">
-  <img src="testdata/flyio-button.svg?raw=true" width="200">
-</a>
-
-#### About Fly.io
-
-Fly is a platform for applications that need to run globally. It runs your code close to users and scales compute in cities where your app is busiest. Write your code, package it into a Docker image, deploy it to Fly's platform and let that do all the work to keep your app snappy.
-
-You can [learn more](https://fly.io/docs/) about how Fly.io can reduce latency and provide a better experience by serving traffic close to your users location.
-
-#### Global image service tutorial
-
-[Learn more](https://fly.io/docs/app-guides/run-a-global-image-service/) about how to run a custom deployment of imaginary on the Fly.io cloud.
-
-### CloudFoundry
-
-Assuming you have cloudfoundry account, [bluemix](https://console.ng.bluemix.net/) or [pivotal](https://console.run.pivotal.io/) and [command line utility installed](https://github.com/cloudfoundry/cli).
-
-Clone this repository:
-```
-git clone https://github.com/h2non/imaginary.git
-```
-
-Push the application
-```
-cf push -b https://github.com/yacloud-io/go-buildpack-imaginary.git imaginary-inst01 --no-start
-```
-
-Define the library path
-```
-cf set-env imaginary-inst01 LD_LIBRARY_PATH /home/vcap/app/vendor/vips/lib
-```
-
-Start the application
-```
-cf start imaginary-inst01
-```
-
-### Google Cloud Run
-
-Click to deploy on Google Cloud Run:
-
-[![Run on Google Cloud](https://deploy.cloud.run/button.svg)](https://deploy.cloud.run)
-
 ### Recommended resources
 
 Given the multithreaded native nature of Go, in terms of CPUs, most cores means more concurrency and therefore, a better performance can be achieved.
-From the other hand, in terms of memory, 512MB of RAM is usually enough for small services with low concurrency (<5 requests/second).
-Up to 2GB for high-load HTTP service processing potentially large images or exposed to an eventual high concurrency.
+
+On the other hand, in terms of memory, 512MB of RAM is usually enough for small services with low concurrency (<5 requests/second). Up to 2GB for high-load HTTP service processing potentially large images or exposed to an eventual high concurrency.
 
 If you need to expose `imaginary` as public HTTP server, it's highly recommended to protect the service against DDoS-like attacks.
+
 `imaginary` has built-in support for HTTP concurrency throttle strategy to deal with this in a more convenient way and mitigate possible issues limiting the number of concurrent requests per second and caching the awaiting requests, if necessary.
 
 ### Production notes
 
-In production focused environments it's highly recommended to enable the HTTP concurrency throttle strategy in your `imaginary` servers.
+In production environments it's highly recommended to enable the HTTP concurrency throttle strategy in your `imaginary` servers.
 
 The recommended concurrency limit per server to guarantee a good performance is up to `20` requests per second.
 
-You can enable it simply passing a flag to the binary:
+You can enable it by passing a flag to the binary:
+
 ```
-$ imaginary -concurrency 20
+imaginary -concurrency 20
 ```
 
 ### Memory issues
@@ -235,30 +168,20 @@ In case you are experiencing any persistent unreleased memory issues in your dep
 MALLOC_ARENA_MAX=2 imaginary -p 9000 -enable-url-source
 ```
 
-### Graceful shutdown
-
-When you use a cluster, it is necessary to control how the deployment is executed, and it is very useful to finish the containers in a controlled.
-
-You can use the next command:
-
-```
-$ ps auxw | grep 'bin/imaginary' | awk 'NR>1{print buf}{buf = $2}' | xargs kill -TERM > /dev/null 2>&1
-```
-
 ### Scalability
 
 If you're looking for a large scale solution for massive image processing, you should scale `imaginary` horizontally, distributing the HTTP load across a pool of imaginary servers.
 
-Assuming that you want to provide a high availability to deal efficiently with, let's say, 100 concurrent req/sec, a good approach would be using a front end balancer (e.g: HAProxy) to delegate the traffic control flow, ensure the quality of service and distribution the HTTP across a pool of servers:
+Assuming that you want to provide a high availability to deal efficiently with, let's say, 100 concurrent req/sec, a good approach would be using a front-end load balancer (e.g: Traefik) to delegate the traffic control flow, ensure the quality of service and distribution the HTTP across a pool of servers:
 
 ```
         |==============|
         |  Dark World  |
         |==============|
               ||||
-        |==============|
-        |   Balancer   |
-        |==============|
+      |==================|
+      |  Load balancer   |
+      |==================|
            |       |
           /         \
          /           \
@@ -281,22 +204,6 @@ Here you can see some performance test comparisons for multiple scenarios:
 
 - [libvips speed and memory usage](https://github.com/libvips/libvips/wiki/Benchmarks)
 - [bimg](https://github.com/h2non/bimg#Performance) (Go library with C bindings to libvips)
-
-## Benchmark
-
-See [benchmark.sh](https://github.com/h2non/imaginary/blob/master/benchmark.sh) for more details
-
-Environment: Go 1.4.2. libvips-7.42.3. OSX i7 2.7Ghz
-
-```
-Requests  [total]       200
-Duration  [total, attack, wait]   10.030639787s, 9.949499515s, 81.140272ms
-Latencies [mean, 50, 95, 99, max]   83.124471ms, 82.899435ms, 88.948008ms, 95.547765ms, 104.384977ms
-Bytes In  [total, mean]     23443800, 117219.00
-Bytes Out [total, mean]     175517000, 877585.00
-Success   [ratio]       100.00%
-Status Codes  [code:count]      200:200
-```
 
 ### Conclusions
 
@@ -361,43 +268,52 @@ Options:
 ```
 
 Start the server in a custom port:
+
 ```bash
 imaginary -p 8080
 ```
 
 Also, you can pass the port as environment variable:
+
 ```bash
 PORT=8080 imaginary
 ```
 
 Enable HTTP server throttle strategy (max 10 requests/second):
+
 ```
 imaginary -p 8080 -concurrency 10
 ```
 
 Enable remote URL image fetching (then you can do GET request passing the `url=http://server.com/image.jpg` query param):
+
 ```
 imaginary -p 8080 -enable-url-source
 ```
 
 Mount local directory (then you can do GET request passing the `file=image.jpg` query param):
+
 ```
 imaginary -p 8080 -mount ~/images
 ```
 
 Enable authorization header forwarding to image origin server. `X-Forward-Authorization` or `Authorization` (by priority) header value will be forwarded as `Authorization` header to the target origin server, if one of those headers are present in the incoming HTTP request.
 Security tip: secure your server from public access to prevent attack vectors when enabling this option:
+
 ```
 imaginary -p 8080 -enable-url-source -enable-auth-forwarding
 ```
 
 Or alternatively you can manually define an constant Authorization header value that will be always sent when fetching images from remote image origins. If defined, `X-Forward-Authorization` or `Authorization` headers won't be forwarded, and therefore ignored, if present.
+
 **Note**:
+
 ```
 imaginary -p 8080 -enable-url-source -authorization "Bearer s3cr3t"
 ```
 
 Send fixed caching headers in the response. The headers can be set in either "cache nothing" or "cache for N seconds". By specifying `0` imaginary will send the "don't cache" headers, otherwise it sends headers with a TTL. The following example informs the client to cache the result for 1 year:
+
 ```
 imaginary -p 8080 -enable-url-source -http-cache-ttl 31556926
 ```
@@ -408,6 +324,7 @@ Also, the placeholder image will be also transparently converted to the desired 
 
 This feature is particularly useful when using `imaginary` as public HTTP service consumed by Web clients.
 In case of error, the appropriate HTTP status code will be used to reflect the error, and the error details will be exposed serialized as JSON in the `Error` response HTTP header, for further inspection and convenience for API clients.
+
 ```
 imaginary -p 8080 -enable-placeholder -enable-url-source
 ```
@@ -415,6 +332,7 @@ imaginary -p 8080 -enable-placeholder -enable-url-source
 You can optionally use a custom placeholder image.
 Since the placeholder image should fit a variety of different sizes, it's recommended to use a large image, such as `1200`x`1200`.
 Supported custom placeholder image types are: `JPEG`, `PNG` and `WEBP`.
+
 ```
 imaginary -p 8080 -placeholder=placeholder.jpg -enable-url-source
 ```
@@ -422,31 +340,37 @@ imaginary -p 8080 -placeholder=placeholder.jpg -enable-url-source
 Enable URL signature (URL-safe Base64-encoded HMAC digest).
 
 This feature is particularly useful to protect against multiple image operations attacks and to verify the requester identity.
+
 ```
 imaginary -p 8080 -enable-url-signature -url-signature-key 4f46feebafc4b5e988f131c4ff8b5997
 ```
 
 It is recommended to pass key as environment variables:
+
 ```
 URL_SIGNATURE_KEY=4f46feebafc4b5e988f131c4ff8b5997 imaginary -p 8080 -enable-url-signature
 ```
 
 Increase libvips threads concurrency (experimental):
+
 ```
 VIPS_CONCURRENCY=10 imaginary -p 8080 -concurrency 10
 ```
 
 Enable debug mode:
+
 ```
 DEBUG=* imaginary -p 8080
 ```
 
 Or filter debug output by package:
+
 ```
 DEBUG=imaginary imaginary -p 8080
 ```
 
 Disable info logs:
+
 ```
 GOLANG_LOG=error imaginary -p 8080
 ```
@@ -454,18 +378,21 @@ GOLANG_LOG=error imaginary -p 8080
 #### Examples
 
 Reading a local image (you must pass the `-mount=<directory>` flag):
+
 ```
 curl -O "http://localhost:8088/crop?width=500&height=400&file=foo/bar/image.jpg"
 ```
 
 Fetching the image from a remote server (you must pass the `-enable-url-source` flag):
+
 ```
-curl -O "http://localhost:8088/crop?width=500&height=400&url=https://raw.githubusercontent.com/h2non/imaginary/master/testdata/large.jpg"
+curl -O "http://localhost:8088/crop?width=500&height=400&url=https://raw.githubusercontent.com/ItalyPaleAle/imaginary/main/testdata/large.jpg"
 ```
 
 Crop behaviour can be influenced with the `gravity` parameter. You can specify a preference for a certain region (north, south, etc.). To enable Smart Crop you can specify the value "smart" to autodetect the most interesting section to consider as center point for the crop operation:
+
 ```
-curl -O "http://localhost:8088/crop?width=500&height=200&gravity=smart&url=https://raw.githubusercontent.com/h2non/imaginary/master/testdata/smart-crop.jpg"
+curl -O "http://localhost:8088/crop?width=500&height=200&gravity=smart&url=https://raw.githubusercontent.com/ItalyPaleAle/imaginary/main/testdata/smart-crop.jpg"
 ```
 
 
@@ -535,7 +462,7 @@ Here an example response error when the payload is empty:
 }
 ```
 
-See all the predefined supported errors [here](https://github.com/h2non/imaginary/blob/master/error.go#L19-L28).
+See all the predefined supported errors [here](https://github.com/ItalyPaleAle/imaginary/blob/main/error.go#L19-L28).
 
 #### Placeholder
 
@@ -640,11 +567,13 @@ Example response:
 ```
 
 #### GET /form
+
 Content Type: `text/html`
 
 Serves an ugly HTML form, just for testing/playground purposes
 
 #### GET | POST /info
+
 Accepts: `image/*, multipart/form-data`. Content-Type: `application/json`
 
 Returns the image metadata as JSON:
@@ -662,6 +591,7 @@ Returns the image metadata as JSON:
 ```
 
 #### GET | POST /crop
+
 Accepts: `image/*, multipart/form-data`. Content-Type: `image/*`
 
 Crop the image by a given width or height. Image ratio is maintained
@@ -694,6 +624,7 @@ Crop the image by a given width or height. Image ratio is maintained
 - aspectratio `string`
 
 #### GET | POST /smartcrop
+
 Accepts: `image/*, multipart/form-data`. Content-Type: `image/*`
 
 Crop the image by a given width or height using the [libvips](https://github.com/jcupitt/libvips/blob/master/libvips/conversion/smartcrop.c) built-in smart crop algorithm.
@@ -726,6 +657,7 @@ Crop the image by a given width or height using the [libvips](https://github.com
 - aspectratio `string`
 
 #### GET | POST /resize
+
 Accepts: `image/*, multipart/form-data`. Content-Type: `image/*`
 
 Resize an image by width or height. Image aspect ratio is maintained
@@ -759,6 +691,7 @@ Resize an image by width or height. Image aspect ratio is maintained
 - palette `bool`
 
 #### GET | POST /enlarge
+
 Accepts: `image/*, multipart/form-data`. Content-Type: `image/*`
 
 ##### Allowed params
@@ -789,6 +722,7 @@ Accepts: `image/*, multipart/form-data`. Content-Type: `image/*`
 - palette `bool`
 
 #### GET | POST /extract
+
 Accepts: `image/*, multipart/form-data`. Content-Type: `image/*`
 
 ##### Allowed params
@@ -823,6 +757,7 @@ Accepts: `image/*, multipart/form-data`. Content-Type: `image/*`
 - palette `bool`
 
 #### GET | POST /zoom
+
 Accepts: `image/*, multipart/form-data`. Content-Type: `image/*`
 
 ##### Allowed params
@@ -855,6 +790,7 @@ Accepts: `image/*, multipart/form-data`. Content-Type: `image/*`
 - palette `bool`
 
 #### GET | POST /thumbnail
+
 Accepts: `image/*, multipart/form-data`. Content-Type: `image/*`
 
 ##### Allowed params
@@ -885,6 +821,7 @@ Accepts: `image/*, multipart/form-data`. Content-Type: `image/*`
 - palette `bool`
 
 #### GET | POST /fit
+
 Accepts: `image/*, multipart/form-data`. Content-Type: `image/*`
 
 Resize an image to fit within width and height, without cropping. Image aspect ratio is maintained
@@ -918,10 +855,11 @@ The width and height specify a maximum bounding box for the image.
 - palette `bool`
 
 #### GET | POST /rotate
+
 Accepts: `image/*, multipart/form-data`. Content-Type: `image/*`
 
-
 #### GET | POST /autorotate
+
 Accepts: `image/*, multipart/form-data`. Content-Type: `image/*`
 
 Automatically rotate the image with no further image transformations based on EXIF orientation metadata.
@@ -956,6 +894,7 @@ Returns a new image with the same size and format as the input image.
 - palette `bool`
 
 #### GET | POST /flip
+
 Accepts: `image/*, multipart/form-data`. Content-Type: `image/*`
 
 ##### Allowed params
@@ -985,6 +924,7 @@ Accepts: `image/*, multipart/form-data`. Content-Type: `image/*`
 - palette `bool`
 
 #### GET | POST /flop
+
 Accepts: `image/*, multipart/form-data`. Content-Type: `image/*`
 
 ##### Allowed params
@@ -1014,6 +954,7 @@ Accepts: `image/*, multipart/form-data`. Content-Type: `image/*`
 - palette `bool`
 
 #### GET | POST /convert
+
 Accepts: `image/*, multipart/form-data`. Content-Type: `image/*`
 
 ##### Allowed params
@@ -1042,6 +983,7 @@ Accepts: `image/*, multipart/form-data`. Content-Type: `image/*`
 - palette `bool`
 
 #### GET | POST /pipeline
+
 Accepts: `image/*, multipart/form-data`. Content-Type: `image/*`
 
 This endpoint allow the user to declare a pipeline of multiple independent image transformation operations all in a single HTTP request.
@@ -1129,8 +1071,98 @@ Self-documented JSON operation schema:
   }
 ]
 ```
+#### GET | POST /multi
+
+Accepts: `image/*, multipart/form-data`. Content-Type: `multipart/form-data`
+
+This endpoint allows performing multiple operations in a single invocation. For exmaple, it's possible to return multiple thumbnails with different sizes.
+
+**Note**: a maximum of 10 tasks are current allowed within the same HTTP request.
+
+Unlike the `/pipeline` method, each task is executed on the source image. The response contains one item per each task, all contained in a `multipart/form-data` body.
+
+##### Allowed params
+
+- tasks `json` `required` - URL safe encoded JSON with a list of tasks. See below for interface details.
+- file `string` - Only GET method and if the `-mount` flag is present
+- url `string` - Only GET method and if the `-enable-url-source` flag is present
+
+##### Tasks JSON specification
+
+Self-documented JSON task schema:
+
+```json
+// List of tasks
+[
+  {
+    // Task name - will be the name of the part in the response. Required.
+    "name": "image-info",
+    // Operation name identifier. Required.
+    "operation": "info"
+  },
+  {
+    "name": "my-thumbnail",
+    "operation": "resize",
+    // Object defining operation specific image transformation params, same as supported URL query params per each endpoint.
+    "params": {
+      "height": 400,
+      "type": "webp"
+    }
+  }
+]
+```
+
+###### Supported operations names
+
+- **info** - Same as [`/info`](#get--post-info) endpoint.
+- **crop** - Same as [`/crop`](#get--post-crop) endpoint.
+- **smartcrop** - Same as [`/smartcrop`](#get--post-smartcrop) endpoint.
+- **resize** - Same as [`/resize`](#get--post-resize) endpoint.
+- **enlarge** - Same as [`/enlarge`](#get--post-enlarge) endpoint.
+- **extract** - Same as [`/extract`](#get--post-extract) endpoint.
+- **rotate** - Same as [`/rotate`](#get--post-rotate) endpoint.
+- **autorotate** - Same as [`/autorotate`](#get--post-autorotate) endpoint.
+- **flip** - Same as [`/flip`](#get--post-flip) endpoint.
+- **flop** - Same as [`/flop`](#get--post-flop) endpoint.
+- **thumbnail** - Same as [`/thumbnail`](#get--post-thumbnail) endpoint.
+- **zoom** - Same as [`/zoom`](#get--post-zoom) endpoint.
+- **convert** - Same as [`/convert`](#get--post-convert) endpoint.
+- **watermark** - Same as [`/watermark`](#get--post-watermark) endpoint.
+- **watermarkimage** - Same as [`/watermarkimage`](#get--post-watermarkimage) endpoint.
+- **blur** - Same as [`/blur`](#get--post-blur) endpoint.
+
+###### Multipart response
+
+The response body is formatted as multipart-form/data.
+
+A part is included for each task that was passed:
+
+- `name` is the name of the task
+- `filename` is the name of the task with the added extension for the image type
+- `Content-Type` is the MIME type of the part
+
+For the `info` task, no `filename` is included, and the `Content-Type` is `application/json`.
+
+###### Example response
+
+With the request in the example above, the response looks similar to:
+
+```json
+--4a988e5acb42ab8c3d335190cfe2113a4817a2ad59a7aa4e6210ea510692
+Content-Disposition: form-data; name="image-info"
+Content-Type: application/json
+
+{"width":4032,"height":3024,"type":"heif","space":"srgb","hasAlpha":false,"hasProfile":true,"channels":3,"orientation":0,"exif":{...}}
+--4a988e5acb42ab8c3d335190cfe2113a4817a2ad59a7aa4e6210ea510692
+Content-Disposition: form-data; name="my-thumbnail"; filename="my-thumbnail.webp"
+Content-Type: image/webp
+
+<IMAGE DATA>
+--4a988e5acb42ab8c3d335190cfe2113a4817a2ad59a7aa4e6210ea510692--
+```
 
 #### GET | POST /watermark
+
 Accepts: `image/*, multipart/form-data`. Content-Type: `image/*`
 
 ##### Allowed params
@@ -1166,6 +1198,7 @@ Accepts: `image/*, multipart/form-data`. Content-Type: `image/*`
 - palette `bool`
 
 #### GET | POST /watermarkimage
+
 Accepts: `image/*, multipart/form-data`. Content-Type: `image/*`
 
 ##### Allowed params
@@ -1197,6 +1230,7 @@ Accepts: `image/*, multipart/form-data`. Content-Type: `image/*`
 - palette `bool`
 
 #### GET | POST /blur
+
 Accepts: `image/*, multipart/form-data`. Content-Type: `image/*`
 
 ##### Allowed params
@@ -1279,88 +1313,6 @@ You can ingest Imaginary logs with fluentd using the following fluentd config :
 In the end, access records are tagged with `*.imaginary.access`, and warning /
 error records are tagged with `*.imaginary.error`.
 
-## Support
-
-### Backers
-
-Support us with a monthly donation and help us continue our activities. [[Become a backer](https://opencollective.com/imaginary#backer)]
-
-<a href="https://opencollective.com/imaginary/backer/0/website" target="_blank"><img src="https://opencollective.com/imaginary/backer/0/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/backer/1/website" target="_blank"><img src="https://opencollective.com/imaginary/backer/1/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/backer/2/website" target="_blank"><img src="https://opencollective.com/imaginary/backer/2/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/backer/3/website" target="_blank"><img src="https://opencollective.com/imaginary/backer/3/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/backer/4/website" target="_blank"><img src="https://opencollective.com/imaginary/backer/4/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/backer/5/website" target="_blank"><img src="https://opencollective.com/imaginary/backer/5/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/backer/6/website" target="_blank"><img src="https://opencollective.com/imaginary/backer/6/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/backer/7/website" target="_blank"><img src="https://opencollective.com/imaginary/backer/7/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/backer/8/website" target="_blank"><img src="https://opencollective.com/imaginary/backer/8/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/backer/9/website" target="_blank"><img src="https://opencollective.com/imaginary/backer/9/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/backer/10/website" target="_blank"><img src="https://opencollective.com/imaginary/backer/10/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/backer/11/website" target="_blank"><img src="https://opencollective.com/imaginary/backer/11/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/backer/12/website" target="_blank"><img src="https://opencollective.com/imaginary/backer/12/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/backer/13/website" target="_blank"><img src="https://opencollective.com/imaginary/backer/13/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/backer/14/website" target="_blank"><img src="https://opencollective.com/imaginary/backer/14/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/backer/15/website" target="_blank"><img src="https://opencollective.com/imaginary/backer/15/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/backer/16/website" target="_blank"><img src="https://opencollective.com/imaginary/backer/16/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/backer/17/website" target="_blank"><img src="https://opencollective.com/imaginary/backer/17/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/backer/18/website" target="_blank"><img src="https://opencollective.com/imaginary/backer/18/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/backer/19/website" target="_blank"><img src="https://opencollective.com/imaginary/backer/19/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/backer/20/website" target="_blank"><img src="https://opencollective.com/imaginary/backer/20/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/backer/21/website" target="_blank"><img src="https://opencollective.com/imaginary/backer/21/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/backer/22/website" target="_blank"><img src="https://opencollective.com/imaginary/backer/22/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/backer/23/website" target="_blank"><img src="https://opencollective.com/imaginary/backer/23/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/backer/24/website" target="_blank"><img src="https://opencollective.com/imaginary/backer/24/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/backer/25/website" target="_blank"><img src="https://opencollective.com/imaginary/backer/25/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/backer/26/website" target="_blank"><img src="https://opencollective.com/imaginary/backer/26/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/backer/27/website" target="_blank"><img src="https://opencollective.com/imaginary/backer/27/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/backer/28/website" target="_blank"><img src="https://opencollective.com/imaginary/backer/28/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/backer/29/website" target="_blank"><img src="https://opencollective.com/imaginary/backer/29/avatar.svg"></a>
-
-### Support this project
-
-[![OpenCollective](https://opencollective.com/imaginary/backers/badge.svg)](#backers)
-
-### Sponsors
-
-Become a sponsor and get your logo on our README on Github with a link to your site. [[Become a sponsor](https://opencollective.com/imaginary#sponsor)]
-
-<a href="https://opencollective.com/imaginary/sponsor/0/website" target="_blank"><img src="https://opencollective.com/imaginary/sponsor/0/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/sponsor/1/website" target="_blank"><img src="https://opencollective.com/imaginary/sponsor/1/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/sponsor/2/website" target="_blank"><img src="https://opencollective.com/imaginary/sponsor/2/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/sponsor/3/website" target="_blank"><img src="https://opencollective.com/imaginary/sponsor/3/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/sponsor/4/website" target="_blank"><img src="https://opencollective.com/imaginary/sponsor/4/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/sponsor/5/website" target="_blank"><img src="https://opencollective.com/imaginary/sponsor/5/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/sponsor/6/website" target="_blank"><img src="https://opencollective.com/imaginary/sponsor/6/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/sponsor/7/website" target="_blank"><img src="https://opencollective.com/imaginary/sponsor/7/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/sponsor/8/website" target="_blank"><img src="https://opencollective.com/imaginary/sponsor/8/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/sponsor/9/website" target="_blank"><img src="https://opencollective.com/imaginary/sponsor/9/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/sponsor/10/website" target="_blank"><img src="https://opencollective.com/imaginary/sponsor/10/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/sponsor/11/website" target="_blank"><img src="https://opencollective.com/imaginary/sponsor/11/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/sponsor/12/website" target="_blank"><img src="https://opencollective.com/imaginary/sponsor/12/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/sponsor/13/website" target="_blank"><img src="https://opencollective.com/imaginary/sponsor/13/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/sponsor/14/website" target="_blank"><img src="https://opencollective.com/imaginary/sponsor/14/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/sponsor/15/website" target="_blank"><img src="https://opencollective.com/imaginary/sponsor/15/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/sponsor/16/website" target="_blank"><img src="https://opencollective.com/imaginary/sponsor/16/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/sponsor/17/website" target="_blank"><img src="https://opencollective.com/imaginary/sponsor/17/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/sponsor/18/website" target="_blank"><img src="https://opencollective.com/imaginary/sponsor/18/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/sponsor/19/website" target="_blank"><img src="https://opencollective.com/imaginary/sponsor/19/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/sponsor/20/website" target="_blank"><img src="https://opencollective.com/imaginary/sponsor/20/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/sponsor/21/website" target="_blank"><img src="https://opencollective.com/imaginary/sponsor/21/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/sponsor/22/website" target="_blank"><img src="https://opencollective.com/imaginary/sponsor/22/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/sponsor/23/website" target="_blank"><img src="https://opencollective.com/imaginary/sponsor/23/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/sponsor/24/website" target="_blank"><img src="https://opencollective.com/imaginary/sponsor/24/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/sponsor/25/website" target="_blank"><img src="https://opencollective.com/imaginary/sponsor/25/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/sponsor/26/website" target="_blank"><img src="https://opencollective.com/imaginary/sponsor/26/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/sponsor/27/website" target="_blank"><img src="https://opencollective.com/imaginary/sponsor/27/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/sponsor/28/website" target="_blank"><img src="https://opencollective.com/imaginary/sponsor/28/avatar.svg"></a>
-<a href="https://opencollective.com/imaginary/sponsor/29/website" target="_blank"><img src="https://opencollective.com/imaginary/sponsor/29/avatar.svg"></a>
-
-## Authors
-
-- [Tomás Aparicio](https://github.com/h2non) - Original author and maintainer.
-
 ## License
 
 MIT - Tomas Aparicio
-
-[![views](https://sourcegraph.com/api/repos/github.com/h2non/imaginary/.counters/views.svg)](https://sourcegraph.com/github.com/h2non/imaginary)
