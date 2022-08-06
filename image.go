@@ -475,9 +475,9 @@ func Multi(buf []byte, o ImageOptions) (image Image, err error) {
 	wg := sync.WaitGroup{}
 	writingLock := sync.Mutex{}
 	var errOut error
-	for i, task := range o.Multi {
+	for _, task := range o.Multi {
 		wg.Add(1)
-		go func(i int, task MultiTask) {
+		go func(task MultiTask) {
 			defer wg.Done()
 
 			res, err := task.Operation(buf, task.ImageOptions)
@@ -506,7 +506,7 @@ func Multi(buf []byte, o ImageOptions) (image Image, err error) {
 			} else {
 				mh.Set("Content-Type", res.Mime)
 				mh.Set("Content-Disposition",
-					fmt.Sprintf(`form-data; name="%s"; filename="%d%s"`, task.Name, i, ext),
+					fmt.Sprintf(`form-data; name="%s"; filename="%s%s"`, task.Name, task.Name, ext),
 				)
 			}
 			part, err := mw.CreatePart(mh)
@@ -524,7 +524,7 @@ func Multi(buf []byte, o ImageOptions) (image Image, err error) {
 				errOut = fmt.Errorf("written only %d/%d bytes in part", written, len(res.Body))
 				return
 			}
-		}(i, task)
+		}(task)
 	}
 	wg.Wait()
 
