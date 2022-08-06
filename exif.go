@@ -416,7 +416,7 @@ func populateGPSFields(s *bimg.EXIF) *EXIFGPS {
 	default:
 		return nil
 	}
-	res.Latitude = math.Round(res.Latitude*10_000) / 10_000
+	res.Latitude = math.Round(res.Latitude*100_000) / 100_000
 
 	res.Longitude = parseGPSCoordinate(s.GPSLongitude)
 	switch s.GPSLongitudeRef {
@@ -426,7 +426,7 @@ func populateGPSFields(s *bimg.EXIF) *EXIFGPS {
 	default:
 		return nil
 	}
-	res.Longitude = math.Round(res.Longitude*10_000) / 10_000
+	res.Longitude = math.Round(res.Longitude*100_000) / 100_000
 
 	if s.GPSAltitude != "" {
 		if alt, err := parseEXIFRational(s.GPSAltitude); err == nil {
