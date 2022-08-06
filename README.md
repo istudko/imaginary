@@ -8,7 +8,7 @@ with additional optional features such as **API token authorization**, **URL sig
 
 `imaginary` **can read** images **from HTTP POST payloads**, **server local path** or **remote HTTP servers**, supporting: **JPEG**, **PNG**, **WEBP**, **HEIF**, **AVIF**, **TIFF**, **PDF**, **GIF** and **SVG**.
 
-`imaginary` is able to output images as JPEG, PNG, WEBP and AVIF formats, including transparent conversion across them.
+`imaginary` is able to output images as JPEG, PNG, WEBP and AVIF formats, including transparent conversion across them. It can also return the **EXIF** metadata from the images.
 
 `imaginary` optionally **supports image placeholder fallback mechanism** in case of image processing error or server error of any nature, hence an image will be always returned by imaginary even in case of error, trying to match the requested image size and format type transparently. The error details will be provided in the response HTTP header `Error` field serialized as JSON.
 
@@ -576,17 +576,55 @@ Serves an ugly HTML form, just for testing/playground purposes
 
 Accepts: `image/*, multipart/form-data`. Content-Type: `application/json`
 
-Returns the image metadata as JSON:
+Returns the image metadata as JSON, including the EXIF tags:
+
 ```json
 {
-  "width": 550,
-  "height": 740,
-  "type": "jpeg",
+  "width": 4032,
+  "height": 3024,
+  "type": "heif",
   "space": "srgb",
   "hasAlpha": false,
   "hasProfile": true,
   "channels": 3,
-  "orientation": 1
+  "orientation": 0,
+  "exif": {
+    "make": "Apple",
+    "model": "iPhone 13 Pro",
+    "orientation": 0,
+    "software": "15.1",
+    "iso": 50,
+    "focalLengthIn35mmFilm": 26,
+    "exifImageWidth": 4032,
+    "exifImageHeight": 3024,
+    "xResolution": "72 ppi",
+    "yResolution": "72 ppi",
+    "dateTime": "2021-10-29T16:25:21Z",
+    "dateTimeOriginal": "2021-10-29T16:25:21Z",
+    "dateTimeDigitized": "2021-10-29T16:25:21Z",
+    "fNumber": "1.5",
+    "exposureTime": "1/4831",
+    "exposureProgram": "Program AE",
+    "shutterSpeedValue": "12.24",
+    "apertureValue": "1.17",
+    "brightnessValue": "10.25",
+    "exposureCompensation": "0",
+    "meteringMode": "Multi-segment",
+    "flashMode": "Off, Did not fire",
+    "focalLength": "5.7",
+    "subjectArea": [2009, 1506, 2208, 1327],
+    "colorSpace": "Uncalibrated",
+    "sensingMethod": "One-chip color area",
+    "sceneType": "Directly photographed",
+    "gps": {
+      "latitude": 40.1751,
+      "longitude": 11.9968,
+      "altitude": "206.72 m",
+      "speed": "0.42 km/h",
+      "direction": 324.71,
+      "directionRef": "True North"
+    }
+  }
 }
 ```
 
