@@ -1,3 +1,10 @@
+1.5.0 (italypaleale) / 2022-08-06
+=================================
+
+* Added `/multi` to perform multiple operations in a single call
+* Removed the `/form` route
+* Increased EXIF latitude/longitude precision to 5 decimals
+
 1.4.0 (italypaleale) / 2022-08-02
 =================================
 

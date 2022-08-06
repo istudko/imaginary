@@ -536,15 +536,17 @@ Content-Type: `application/json`
 Serves as JSON the current `imaginary`, `bimg` and `libvips` versions.
 
 Example response:
+
 ```json
 {
-  "imaginary": "0.1.28",
-  "bimg": "1.0.5",
-  "libvips": "8.4.1"
+  "imaginary": "1.5.0",
+  "bimg": "1.1.9",
+  "libvips": "8.13.0"
 }
 ```
 
 #### GET /health
+
 Content-Type: `application/json`
 
 Provides some useful statistics about the server stats with the following structure:
@@ -553,24 +555,29 @@ Provides some useful statistics about the server stats with the following struct
 - **allocatedMemory** `number` - Currently allocated memory in megabytes.
 - **totalAllocatedMemory** `number` - Total allocated memory over the time in megabytes.
 - **goroutines** `number` - Number of running goroutines.
+- **completedGCCycles** `number` - Number of completed garbage collection cycles.
 - **cpus** `number` - Number of used CPU cores.
+- **maxHeapUsage** `number` - Max heap memory usage in megabytes.
+- **heapInUse** `number` - Current heap memory usage in megabytes.
+- **objectsInUse** `number` - Number of objects in use.
+- **OSMemoryObtained** `number` - System memory in megabytes.
 
 Example response:
+
 ```json
 {
-  "uptime": 1293,
-  "allocatedMemory": 5.31,
-  "totalAllocatedMemory": 34.3,
-  "goroutines": 19,
-  "cpus": 8
+	"uptime": 24,
+	"allocatedMemory": 3.58,
+	"totalAllocatedMemory": 65.04,
+	"goroutines": 7,
+	"completedGCCycles": 13,
+	"cpus": 3,
+	"maxHeapUsage": 23.56,
+	"heapInUse": 3.58,
+	"objectsInUse": 1927,
+	"OSMemoryObtained": 29.21
 }
 ```
-
-#### GET /form
-
-Content Type: `text/html`
-
-Serves an ugly HTML form, just for testing/playground purposes
 
 #### GET | POST /info
 
