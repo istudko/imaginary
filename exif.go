@@ -13,42 +13,42 @@ import (
 )
 
 type EXIF struct {
-	Make                    string     `json:"make,omitempty"`
-	Model                   string     `json:"model,omitempty"`
-	Orientation             int        `json:"orientation"` // Do not add "omitempty" to include value 0
-	Software                string     `json:"software,omitempty"`
-	YCbCrPositioning        int        `json:"ycbcrPositioning,omitempty"`
-	ExifVersion             string     `json:"exifVersion,omitempty"`
-	ISO                     int        `json:"iso,omitempty"`
-	ComponentsConfiguration string     `json:"componentsConfiguration,omitempty"`
-	FocalLengthIn35mmFilm   int        `json:"focalLengthIn35mmFilm,omitempty"`
-	ExifImageWidth          int        `json:"exifImageWidth,omitempty"`
-	ExifImageHeight         int        `json:"exifImageHeight,omitempty"`
-	XResolution             string     `json:"xResolution,omitempty"`
-	YResolution             string     `json:"yResolution,omitempty"`
-	DateTime                *time.Time `json:"dateTime,omitempty"`
-	DateTimeOriginal        *time.Time `json:"dateTimeOriginal,omitempty"`
-	DateTimeDigitized       *time.Time `json:"dateTimeDigitized,omitempty"`
-	FNumber                 string     `json:"fNumber,omitempty"`
-	ExposureTime            string     `json:"exposureTime,omitempty"`
-	ExposureProgram         any        `json:"exposureProgram,omitempty"`
-	ShutterSpeedValue       string     `json:"shutterSpeedValue,omitempty"`
-	ApertureValue           string     `json:"apertureValue,omitempty"`
-	BrightnessValue         string     `json:"brightnessValue,omitempty"`
-	ExposureCompensation    string     `json:"exposureCompensation,omitempty"`
-	MeteringMode            any        `json:"meteringMode,omitempty"`
-	Compression             any        `json:"compression,omitempty"`
-	Flash                   bool       `json:"flash,omitempty"`
-	FlashMode               any        `json:"flashMode,omitempty"`
-	FocalLength             string     `json:"focalLength,omitempty"`
-	SubjectArea             []int      `json:"subjectArea,omitempty"`
-	ColorSpace              any        `json:"colorSpace,omitempty"`
-	SensingMethod           any        `json:"sensingMethod,omitempty"`
-	ExposureMode            any        `json:"exposureMode,omitempty"`
-	WhiteBalance            any        `json:"whiteBalance,omitempty"`
-	SceneType               string     `json:"sceneType,omitempty"`
-	SceneCaptureType        int        `json:"sceneCaptureType,omitempty"`
-	GPS                     *EXIFGPS   `json:"gps,omitempty"`
+	Make                    string   `json:"make,omitempty"`
+	Model                   string   `json:"model,omitempty"`
+	Orientation             int      `json:"orientation"` // Do not add "omitempty" to include value 0
+	Software                string   `json:"software,omitempty"`
+	YCbCrPositioning        int      `json:"ycbcrPositioning,omitempty"`
+	ExifVersion             string   `json:"exifVersion,omitempty"`
+	ISO                     int      `json:"iso,omitempty"`
+	ComponentsConfiguration string   `json:"componentsConfiguration,omitempty"`
+	FocalLengthIn35mmFilm   int      `json:"focalLengthIn35mmFilm,omitempty"`
+	ExifImageWidth          int      `json:"exifImageWidth,omitempty"`
+	ExifImageHeight         int      `json:"exifImageHeight,omitempty"`
+	XResolution             string   `json:"xResolution,omitempty"`
+	YResolution             string   `json:"yResolution,omitempty"`
+	DateTime                string   `json:"dateTime,omitempty"`
+	DateTimeOriginal        string   `json:"dateTimeOriginal,omitempty"`
+	DateTimeDigitized       string   `json:"dateTimeDigitized,omitempty"`
+	FNumber                 string   `json:"fNumber,omitempty"`
+	ExposureTime            string   `json:"exposureTime,omitempty"`
+	ExposureProgram         any      `json:"exposureProgram,omitempty"`
+	ShutterSpeedValue       string   `json:"shutterSpeedValue,omitempty"`
+	ApertureValue           string   `json:"apertureValue,omitempty"`
+	BrightnessValue         string   `json:"brightnessValue,omitempty"`
+	ExposureCompensation    string   `json:"exposureCompensation,omitempty"`
+	MeteringMode            any      `json:"meteringMode,omitempty"`
+	Compression             any      `json:"compression,omitempty"`
+	Flash                   bool     `json:"flash,omitempty"`
+	FlashMode               any      `json:"flashMode,omitempty"`
+	FocalLength             string   `json:"focalLength,omitempty"`
+	SubjectArea             []int    `json:"subjectArea,omitempty"`
+	ColorSpace              any      `json:"colorSpace,omitempty"`
+	SensingMethod           any      `json:"sensingMethod,omitempty"`
+	ExposureMode            any      `json:"exposureMode,omitempty"`
+	WhiteBalance            any      `json:"whiteBalance,omitempty"`
+	SceneType               string   `json:"sceneType,omitempty"`
+	SceneCaptureType        int      `json:"sceneCaptureType,omitempty"`
+	GPS                     *EXIFGPS `json:"gps,omitempty"`
 	// MakerNote           string `json:"makerNote,omitempty"`
 	// SubSecTimeOriginal  string `json:"subSecTimeOriginal,omitempty"`
 	// SubSecTimeDigitized string `json:"subSecTimeDigitized,omitempty"`
@@ -511,12 +511,14 @@ func formatResolution(resolution string, resolutionUnit int) string {
 }
 
 // Formats the DateTime values
-func formatDateTime(orig string) *time.Time {
+func formatDateTime(orig string) string {
 	t, err := time.Parse("2006:01:02 15:04:05", orig)
 	if err != nil {
-		return nil
+		return ""
 	}
-	return &t
+
+	// Format like RFC3339, but without any time zone
+	return t.Format("2006-01-02T15:04:05")
 }
 
 // Formats a float with at most n decimal digits
