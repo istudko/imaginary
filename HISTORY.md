@@ -1,3 +1,8 @@
+1.5.1 (italypaleale) / 2022-08-20
+=================================
+
+* Date and time EXIF tags returned by `/info` have no time zone offset (as EXIF doesn't support time zones)
+
 1.5.0 (italypaleale) / 2022-08-06
 =================================
 
