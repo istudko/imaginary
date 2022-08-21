@@ -15,7 +15,7 @@ import (
 type EXIF struct {
 	Make                    string   `json:"make,omitempty"`
 	Model                   string   `json:"model,omitempty"`
-	Orientation             int      `json:"orientation"` // Do not add "omitempty" to include value 0
+	Orientation             int      `json:"orientation,omitempty"`
 	Software                string   `json:"software,omitempty"`
 	YCbCrPositioning        int      `json:"ycbcrPositioning,omitempty"`
 	ExifVersion             string   `json:"exifVersion,omitempty"`
@@ -112,7 +112,7 @@ func ParseEXIFFromBimg(s *bimg.EXIF) *EXIF {
 	if s.BrightnessValue != "" {
 		res.BrightnessValue = formatHumanRational(s.BrightnessValue)
 	}
-	if s.ExposureBiasValue != "" {
+	if s.ExposureBiasValue != "" && s.ExposureBiasValue != "0" {
 		res.ExposureCompensation = formatHumanRational(s.ExposureBiasValue)
 	}
 	if s.FocalLength != "" {
@@ -198,7 +198,8 @@ func ParseEXIFFromBimg(s *bimg.EXIF) *EXIF {
 	if s.ExposureProgram > 0 {
 		switch s.ExposureProgram {
 		case 0:
-			res.ExposureProgram = "Not Defined"
+			res.ExposureProgram = nil
+			// res.ExposureProgram = "Not Defined"
 		case 1:
 			res.ExposureProgram = "Manual"
 		case 2:
@@ -224,7 +225,8 @@ func ParseEXIFFromBimg(s *bimg.EXIF) *EXIF {
 	if s.MeteringMode > 0 {
 		switch s.MeteringMode {
 		case 0:
-			res.MeteringMode = "Unknown"
+			res.MeteringMode = nil
+			// res.MeteringMode = "Unknown"
 		case 1:
 			res.MeteringMode = "Average"
 		case 2:
