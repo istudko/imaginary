@@ -346,7 +346,8 @@ func WatermarkImage(buf []byte, o ImageOptions) (Image, error) {
 		_ = response.Body.Close()
 	}()
 
-	bodyReader := io.LimitReader(response.Body, 1e6)
+	maxWatermarkImageSize := int64(4e6)
+	bodyReader := io.LimitReader(response.Body, maxWatermarkImageSize)
 
 	imageBuf, err := ioutil.ReadAll(bodyReader)
 	if len(imageBuf) == 0 {
